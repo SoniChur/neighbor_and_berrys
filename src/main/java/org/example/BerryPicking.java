@@ -1,49 +1,91 @@
 package org.example;
+
+import java.util.Random;
+import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class BerryPicking {
-    public static final int MAX_BERRIES = 1000;
-    public static int currentBerry = MAX_BERRIES;
-    private static final ReentrantLock lockField = new ReentrantLock();
+
+    private static boolean flag1 = false; // флаг первого соседа
+    private static boolean flag2 = false; // флаг второго соседа
+    private static final Lock flagLock = new ReentrantLock(); // Замок для защиты флагов
+    private static int berries = 100; // Начальное количество ягод
+    private static final Random random = new Random(); // Для рандомизации количества собранных ягод
+
+    public static int getBerries() {
+        return berries;
+    }
+
+    public static void setBerries(int berries) {
+        BerryPicking.berries = berries;
+    }
 
     public static class Neighbor implements Runnable {
-        private final int id;
-        public int berry;
+        private final String name;
+        private int progress; // сколько ягод уже собрал
 
-        public Neighbor(int id) {
-            this.id = id;
-            this.berry = 0;
+        public Neighbor(String name) {
+            this.name = name;
+            this.progress = 0;
         }
 
         @Override
-        public void run() {
-            while (true) {
-                lockField.lock();
+        public void run() { // переопределяем метод run
+            while (berries > 0) {
                 try {
-                    if (currentBerry <= 0) {
-                        break;
-                    }
-                    System.out.println(id + ": Пошел на поле собирать ягодки");
-                    int pickedBerries = pickBerries();
-                    berry += pickedBerries;
-                    System.out.println(id + ": Собрал " + pickedBerries + " ягод. Итого: " + berry);
-                } finally {
-                    lockField.unlock();
+                    pickBerries();
+                } catch (InterruptedException e) { // обязательно проверяем
+                    Thread.currentThread().interrupt();
                 }
             }
+            System.out.println(name + " закончил сбор с " + progress + " ягодами.");
         }
-    }
 
-    private static int pickBerries() {
-        int berriesToPick = (int) (Math.random() * 10 + 1);
-        berriesToPick = Math.min(berriesToPick, currentBerry);
-        currentBerry -= berriesToPick;
-        return berriesToPick;
+        private void pickBerries() throws InterruptedException {
+            flagLock.lock();
+            try { //добавляю на всякий случай проверочки
+                if (name.equals("N1")) {
+                    flag1 = true;
+                    while (flag2) {
+                        System.out.println("Сосед " + name + " видит флаг N2. Ожидание...");
+                        Thread.sleep(random.nextInt(500));
+                    }
+                } else {
+                    flag2 = true;
+                    while (flag1) {
+                        System.out.println("Сосед " + name + " видит флаг N1. Ожидание...");
+                        Thread.sleep(random.nextInt(500));
+                    }
+                }
+
+                // Проверка на наличие ягод перед входом на поле
+                if (berries <= 0) {
+                    System.out.println("Сосед " + name + " видит, что ягод больше нет и не заходит на поле :(");
+                    return; // Не заходить на поле, если ягод нет
+                }
+
+                System.out.println("Сосед " + name + " вошел на поле.");
+                int picked = random.nextInt(10) + 1; // Собрать 1-10 ягод
+                if (picked > berries) picked = berries;
+                berries -= picked;
+                progress += picked;
+                System.out.printf("Сосед %s собрал %d ягод. Осталось: %d%n", name, picked, berries);
+                Thread.sleep(random.nextInt(1000));
+
+            } finally {
+                if (name.equals("N1")) flag1 = false;
+                else flag2 = false;
+                System.out.println("Сосед " + name + " вышел с поля.");
+                flagLock.unlock();
+            }
+        }
+
+
     }
 
     public static void main(String[] args) {
-        Neighbor n1 = new Neighbor(1);
-        Neighbor n2 = new Neighbor(2);
+        Neighbor n1 = new Neighbor("N1");
+        Neighbor n2 = new Neighbor("N2");
 
         Thread thread1 = new Thread(n1);
         Thread thread2 = new Thread(n2);
@@ -57,10 +99,6 @@ public class BerryPicking {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-
         System.out.println("Все ягоды собраны.");
-        System.out.println("N1 собрал: " + n1.berry + " ягод.");
-        System.out.println("N2 собрал: " + n2.berry + " ягод.");
     }
 }
-
