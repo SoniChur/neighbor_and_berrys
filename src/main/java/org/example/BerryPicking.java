@@ -41,7 +41,7 @@ public class BerryPicking {
                     tryEnterField();
                     pickBerries();
                     exitField();
-                    // Thread.sleep(random.nextInt(100)); // маленькая задержка после сбора
+
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     break;
@@ -64,6 +64,7 @@ public class BerryPicking {
                         break;
                     } else {
                         System.out.println("Сосед " + name + " видит флаг " + (name.equals("N1") ? "N2" : "N1") + ". Ожидание...");
+                        Thread.sleep(150);
                     }
                 } finally {
                     flagLock.unlock();
@@ -98,7 +99,7 @@ public class BerryPicking {
                 berries -= picked; // Уменьшаем общее количество ягод
                 progress += picked; // Увеличиваем прогресс соседа
                 System.out.printf("Сосед %s собрал %d ягод. Осталось: %d%n", name, picked, berries);
-                // Thread.sleep(random.nextInt(1000)); // Задержка для имитации времени сбора
+                Thread.sleep(100); // Задержка для имитации времени сбора
             }
         }
     }
